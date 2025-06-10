@@ -1,9 +1,9 @@
-from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import Optional, List
 import os, shutil, datetime
-from . import models, database, schemas
+import models, database, schemas
 
 app = FastAPI()
 
@@ -20,25 +20,26 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @app.post("/upload")
 def upload_study_log(
+    request: Request,
     image: UploadFile = File(...),
     comment: str = Form(...),
-    user_id: int = Form(...),
     db: Session = Depends(database.get_db)
 ):
+    ip = request.client.host
     filename = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_{image.filename}"
     file_path = os.path.join(UPLOAD_DIR, filename)
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(image.file, buffer)
     image_url = f"/{file_path}"
-    log = models.StudyLog(user_id=user_id, image_url=image_url, comment=comment)
+    log = models.StudyLog(user_id=ip, image_url=image_url, comment=comment)
     db.add(log)
     db.commit()
     db.refresh(log)
     # 통계 갱신
-    stat = db.query(models.StudyStat).filter_by(user_id=user_id).first()
+    stat = db.query(models.StudyStat).filter_by(user_id=ip).first()
     now = datetime.datetime.now().date()
     if not stat:
-        stat = models.StudyStat(user_id=user_id, total_logs=1, total_likes=0, streak_days=1, last_log_date=now)
+        stat = models.StudyStat(user_id=ip, total_logs=1, total_likes=0, streak_days=1, last_log_date=now)
         db.add(stat)
     else:
         stat.total_logs += 1
@@ -57,12 +58,11 @@ def get_feed(sort: Optional[str] = "recent", db: Session = Depends(database.get_
         logs = sorted(logs, key=lambda l: len(db.query(models.Like).filter_by(study_log_id=l.id).all()), reverse=True)
     feed = []
     for log in logs:
-        user = db.query(models.User).filter_by(id=log.user_id).first()
         likes = db.query(models.Like).filter_by(study_log_id=log.id).count()
         comments = db.query(models.Comment).filter_by(study_log_id=log.id).count()
         feed.append({
             "log_id": log.id,
-            "user_nickname": user.nickname if user else "?",
+            "user_id": log.user_id,
             "image_url": log.image_url,
             "comment": log.comment,
             "likes": likes,
@@ -93,9 +93,9 @@ def add_comment(user_id: int = Form(...), log_id: int = Form(...), content: str 
     db.commit()
     return {"status": "commented"}
 
-@app.get("/stats/{user_id}")
-def get_stats(user_id: int, db: Session = Depends(database.get_db)):
-    stat = db.query(models.StudyStat).filter_by(user_id=user_id).first()
+@app.get("/stats/{ip}")
+def get_stats(ip: str, db: Session = Depends(database.get_db)):
+    stat = db.query(models.StudyStat).filter_by(user_id=ip).first()
     today = datetime.datetime.now().date()
     today_logged = False
     if stat and stat.last_log_date and stat.last_log_date == today:
