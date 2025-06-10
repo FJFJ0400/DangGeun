@@ -1,2 +1,6 @@
 streamlit
-requests 
+requests
+pandas
+plotly
+pillow
+python-dotenv 

@@ -12,7 +12,7 @@ class UserBase(BaseModel):
 
 class StudyLogBase(BaseModel):
     id: int
-    user_id: int
+    user_id: str  # IP 주소
     image_url: Optional[str]
     comment: Optional[str]
     created_at: datetime
@@ -37,10 +37,20 @@ class CommentBase(BaseModel):
         orm_mode = True
 
 class StudyStatBase(BaseModel):
-    user_id: int
+    user_id: str  # IP 주소
     total_logs: int
     total_likes: int
     streak_days: int
     last_log_date: Optional[datetime]
+    class Config:
+        orm_mode = True
+
+class TimerLogBase(BaseModel):
+    id: int
+    user_id: str
+    set_seconds: int
+    start_time: datetime
+    end_time: datetime | None = None
+    created_at: datetime
     class Config:
         orm_mode = True 

@@ -105,4 +105,36 @@ def get_stats(ip: str, db: Session = Depends(database.get_db)):
         "total_likes": stat.total_likes if stat else 0,
         "streak_days": stat.streak_days if stat else 0,
         "today_logged": today_logged
-    } 
+    }
+
+@app.post("/timerlog/upload")
+def upload_timer_log(
+    request: Request,
+    set_seconds: int = Form(...),
+    start_time: str = Form(...),
+    end_time: str = Form(...),
+    db: Session = Depends(database.get_db)
+):
+    ip = request.client.host
+    start_dt = datetime.datetime.fromisoformat(start_time)
+    end_dt = datetime.datetime.fromisoformat(end_time)
+    log = models.TimerLog(user_id=ip, set_seconds=set_seconds, start_time=start_dt, end_time=end_dt)
+    db.add(log)
+    db.commit()
+    db.refresh(log)
+    return {"status": "success", "log_id": log.id}
+
+@app.get("/timerlog/feed")
+def get_timer_log_feed(request: Request, db: Session = Depends(database.get_db)):
+    ip = request.client.host
+    logs = db.query(models.TimerLog).filter_by(user_id=ip).order_by(models.TimerLog.created_at.desc()).all()
+    return [
+        {
+            "id": log.id,
+            "set_seconds": log.set_seconds,
+            "start_time": log.start_time.isoformat(),
+            "end_time": log.end_time.isoformat() if log.end_time else None,
+            "created_at": log.created_at.isoformat()
+        }
+        for log in logs
+    ] 

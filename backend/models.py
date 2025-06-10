@@ -15,11 +15,10 @@ class User(Base):
 class StudyLog(Base):
     __tablename__ = 'studylogs'
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey('users.id'))
+    user_id = Column(String(50))
     image_url = Column(String(255))
     comment = Column(String(100))
     created_at = Column(DateTime, default=func.now())
-    user = relationship('User')
 
 class Like(Base):
     __tablename__ = 'likes'
@@ -38,13 +37,21 @@ class Comment(Base):
 
 class StudyStat(Base):
     __tablename__ = 'studystats'
-    user_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
+    user_id = Column(String(50), primary_key=True)
     total_logs = Column(Integer, default=0)
     total_likes = Column(Integer, default=0)
     streak_days = Column(Integer, default=0)
     last_log_date = Column(DateTime)
     badges = Column(String(255))
-    user = relationship('User')
+
+class TimerLog(Base):
+    __tablename__ = 'timerlogs'
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(50))  # IP 주소
+    set_seconds = Column(Integer)  # 설정한 타이머(초)
+    start_time = Column(DateTime, default=func.now())
+    end_time = Column(DateTime)
+    created_at = Column(DateTime, default=func.now())
 
 engine = create_engine('sqlite:///./study.db', connect_args={"check_same_thread": False})
 Base.metadata.create_all(bind=engine) 
