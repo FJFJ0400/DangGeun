@@ -181,10 +181,12 @@ elif choice == "인증 업로드":
     uploaded_file = st.file_uploader("이미지 업로드", type=["jpg", "jpeg", "png"])
     comment = st.text_area("코멘트 입력")
     if st.button("업로드") and uploaded_file:
-        files = {"image": uploaded_file.getvalue()}
-        data = {"comment": comment}
         try:
-            response = requests.post(f"{API_URL}/upload", files={"image": (uploaded_file.name, uploaded_file, uploaded_file.type)}, data={"comment": comment})
+            response = requests.post(
+                f"{API_URL}/upload",
+                files={"image": (uploaded_file.name, uploaded_file, uploaded_file.type)},
+                data={"comment": comment}
+            )
             if response.status_code == 200:
                 st.success("업로드 성공!")
             else:

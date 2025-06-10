@@ -29,30 +29,34 @@ def upload_study_log(
     db: Session = Depends(database.get_db)
 ):
     ip = request.client.host
-    filename = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_{image.filename}"
-    file_path = os.path.join(UPLOAD_DIR, filename)
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(image.file, buffer)
-    image_url = f"/{file_path}"
-    log = models.StudyLog(user_id=ip, image_url=image_url, comment=comment)
-    db.add(log)
-    db.commit()
-    db.refresh(log)
-    # 통계 갱신
-    stat = db.query(models.StudyStat).filter_by(user_id=ip).first()
-    now = datetime.datetime.now().date()
-    if not stat:
-        stat = models.StudyStat(user_id=ip, total_logs=1, total_likes=0, streak_days=1, last_log_date=now)
-        db.add(stat)
-    else:
-        stat.total_logs += 1
-        if stat.last_log_date is not None and (now - stat.last_log_date).days == 1:
-            stat.streak_days += 1
-        elif stat.last_log_date is None or (now - stat.last_log_date).days > 1:
-            stat.streak_days = 1
-        stat.last_log_date = now
-    db.commit()
-    return {"status": "success", "log_id": log.id}
+    try:
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        filename = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_{image.filename}"
+        file_path = os.path.join(UPLOAD_DIR, filename)
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+        image_url = f"/static/uploads/{filename}"
+        log = models.StudyLog(user_id=ip, image_url=image_url, comment=comment)
+        db.add(log)
+        db.commit()
+        db.refresh(log)
+        # 통계 갱신
+        stat = db.query(models.StudyStat).filter_by(user_id=ip).first()
+        now = datetime.datetime.now().date()
+        if not stat:
+            stat = models.StudyStat(user_id=ip, total_logs=1, total_likes=0, streak_days=1, last_log_date=now)
+            db.add(stat)
+        else:
+            stat.total_logs += 1
+            if stat.last_log_date is not None and (now - stat.last_log_date).days == 1:
+                stat.streak_days += 1
+            elif stat.last_log_date is None or (now - stat.last_log_date).days > 1:
+                stat.streak_days = 1
+            stat.last_log_date = now
+        db.commit()
+        return {"status": "success", "log_id": log.id, "image_url": image_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"업로드 실패: {e}")
 
 @app.get("/feed")
 def get_feed(sort: Optional[str] = "recent", db: Session = Depends(database.get_db)):
