@@ -197,8 +197,9 @@ elif choice == "실시간 피드":
             image_url = post["image_url"]
             if image_url.startswith("/"):
                 image_url = API_URL + image_url
-            st.image(image_url, width=200)
-            st.write(post["comment"])
+            # 이미지 세로 직사각형 스타일로 표시
+            st.image(image_url, width=220, clamp=True, output_format="JPEG")
+            st.markdown(f"<div style='font-size:1.1em; margin-top:8px; margin-bottom:4px;'><b>{post['comment']}</b></div>", unsafe_allow_html=True)
             st.caption(f"IP: {post['user_id']} | {post['created_at']}")
             st.markdown("---")
     except Exception as e:
@@ -206,6 +207,7 @@ elif choice == "실시간 피드":
 
 elif choice == "통계":
     st.header("📊 나의 통계")
+    st.info("통계는 이미지 인증 업로드(인증 업로드 메뉴)만 집계됩니다. 타이머 기록은 통계에 포함되지 않습니다.")
     try:
         stats = requests.get(f"{API_URL}/stats/{my_ip}").json()
         st.metric("총 인증 수", stats["total_logs"])
