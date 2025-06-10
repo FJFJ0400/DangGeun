@@ -161,11 +161,16 @@ if choice == "뽀모도로 타이머":
             start_time = end_time
         st.success("타이머가 중간에 종료되었습니다. 기록이 저장됩니다.")
         try:
-            requests.post(f"{API_URL}/timerlog/upload", data={
+            resp = requests.post(f"{API_URL}/timerlog/upload", data={
+                "group_id": group_id,
                 "set_seconds": st.session_state.timer_set_seconds,
                 "start_time": start_time.isoformat(),
                 "end_time": end_time.isoformat()
             })
+            if resp.status_code == 200:
+                st.success("타이머 기록이 저장되었습니다.")
+            else:
+                st.error(f"기록 저장 실패: {resp.text}")
         except Exception as e:
             st.error(f"기록 저장 실패: {e}")
         st.session_state.timer_end = None
@@ -203,11 +208,16 @@ if choice == "뽀모도로 타이머":
             st.session_state.timer_pause_left = None
             st.success("타이머 종료! 기록이 저장됩니다.")
             try:
-                requests.post(f"{API_URL}/timerlog/upload", data={
+                resp = requests.post(f"{API_URL}/timerlog/upload", data={
+                    "group_id": group_id,
                     "set_seconds": st.session_state.timer_set_seconds,
                     "start_time": (end_time - timedelta(seconds=st.session_state.timer_set_seconds)).isoformat(),
                     "end_time": end_time.isoformat()
                 })
+                if resp.status_code == 200:
+                    st.success("타이머 기록이 저장되었습니다.")
+                else:
+                    st.error(f"기록 저장 실패: {resp.text}")
             except Exception as e:
                 st.error(f"기록 저장 실패: {e}")
             left = 0
