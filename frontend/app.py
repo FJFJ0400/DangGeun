@@ -23,7 +23,30 @@ st.set_page_config(page_title="당근 스터디 모임", layout="wide")
 if "group_id" not in st.session_state or "group_name" not in st.session_state:
     st.markdown("<h1 style='text-align:center;'>🥕 당근 스터디 시작하기</h1>", unsafe_allow_html=True)
     st.write("<div style='text-align:center;'>스터디명(그룹명)을 입력하세요.</div>", unsafe_allow_html=True)
-    group_name = st.text_input("스터디명", "", key="group_name_input")
+    # 입력 박스 중앙 정렬 및 placeholder 적용
+    st.markdown("""
+        <style>
+        div[data-testid="stTextInput"] > div > input {
+            text-align: left;
+            font-size: 1.1em;
+            color: #222;
+        }
+        div[data-testid="stTextInput"] > div > input::placeholder {
+            color: #888;
+            opacity: 0.5;
+        }
+        div[data-testid="stTextInput"] {
+            width: 60vw;
+            margin: 0 auto;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    group_name = st.text_input(
+        label=" ",
+        value="",
+        key="group_name_input",
+        placeholder="예시) 스타복수 6월 9일 오후 1시 <4명>"
+    )
     if st.button("START"):
         if group_name.strip():
             resp = requests.post(f"{API_URL}/group/create", params={"name": group_name.strip()})
