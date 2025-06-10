@@ -206,7 +206,7 @@ elif choice == "실시간 피드":
             try:
                 img_response = requests.get(image_url)
                 img = Image.open(io.BytesIO(img_response.content))
-                st.image(img, use_column_width=False)
+                st.image(img, use_container_width=True)
             except Exception as e:
                 st.warning("이미지 로드 실패")
             st.markdown(f"<div style='font-size:1.1em; margin-top:8px; margin-bottom:4px;'><b>{post['comment']}</b></div>", unsafe_allow_html=True)
