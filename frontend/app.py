@@ -36,7 +36,7 @@ if choice == "뽀모도로 타이머":
     with col1:
         hours = st.number_input("시간", min_value=0, max_value=23, value=0, step=1)
     with col2:
-        minutes = st.number_input("분", min_value=0, max_value=59, value=25, step=1)
+        minutes = st.number_input("분", min_value=0, max_value=59, value=50, step=1)  # 기본값 50분
     with col3:
         seconds = st.number_input("초", min_value=0, max_value=59, value=0, step=1)
     set_seconds = int(hours * 3600 + minutes * 60 + seconds)
@@ -52,42 +52,37 @@ if choice == "뽀모도로 타이머":
     start_btn = st.button("START")
     reset_btn = st.button("RESET")
 
+    # 버튼 클릭 시 세션 상태만 변경
     if start_btn:
         st.session_state.timer_running = True
         st.session_state.timer_left = set_seconds
         st.session_state.timer_start = datetime.now().isoformat()
-        st.experimental_rerun()
     if reset_btn:
         st.session_state.timer_running = False
         st.session_state.timer_left = set_seconds
         st.session_state.timer_start = None
-        st.experimental_rerun()
 
     # 타이머 동작
     if st.session_state.timer_running:
-        for i in range(st.session_state.timer_left, -1, -1):
-            m, s = divmod(i, 60)
-            h, m = divmod(m, 60)
-            timer_placeholder.markdown(f"## ⏳ 남은 시간: {int(h):02d}:{int(m):02d}:{int(s):02d}")
-            st.session_state.timer_left = i
-            time.sleep(1)
-            if i == 0:
-                st.session_state.timer_running = False
-                st.success("타이머 종료! 기록이 저장됩니다.")
-                try:
-                    requests.post(f"{API_URL}/timerlog/upload", data={
-                        "set_seconds": set_seconds,
-                        "start_time": st.session_state.timer_start,
-                        "end_time": datetime.now().isoformat()
-                    })
-                except Exception as e:
-                    st.error(f"기록 저장 실패: {e}")
-                st.session_state.timer_left = set_seconds
-                st.session_state.timer_start = None
-                st.experimental_rerun()
-                break
-            if not st.session_state.timer_running:
-                break
+        # Streamlit은 자동 새로고침이 없으므로, 사용자가 수동 새로고침해야 함
+        elapsed = (datetime.now() - datetime.fromisoformat(st.session_state.timer_start)).total_seconds()
+        left = max(0, st.session_state.timer_left - int(elapsed))
+        m, s = divmod(left, 60)
+        h, m = divmod(m, 60)
+        timer_placeholder.markdown(f"## ⏳ 남은 시간: {int(h):02d}:{int(m):02d}:{int(s):02d}")
+        if left == 0:
+            st.session_state.timer_running = False
+            st.success("타이머 종료! 기록이 저장됩니다.")
+            try:
+                requests.post(f"{API_URL}/timerlog/upload", data={
+                    "set_seconds": set_seconds,
+                    "start_time": st.session_state.timer_start,
+                    "end_time": datetime.now().isoformat()
+                })
+            except Exception as e:
+                st.error(f"기록 저장 실패: {e}")
+            st.session_state.timer_left = set_seconds
+            st.session_state.timer_start = None
     else:
         m, s = divmod(st.session_state.timer_left, 60)
         h, m = divmod(m, 60)
