@@ -29,6 +29,25 @@ with st.sidebar:
 
 my_ip = get_my_ip()
 
+hobang_url = "https://i.imgur.com/0XKzn8F.png"
+
+st.markdown(f"""
+    <style>
+    [data-testid="collapsedControl"] {{
+        background-image: url('{hobang_url}');
+        background-size: cover;
+        background-position: center;
+        color: transparent !important;
+        border-radius: 50%;
+        width: 36px !important;
+        height: 36px !important;
+    }}
+    [data-testid="collapsedControl"] svg {{
+        display: none !important;
+    }}
+    </style>
+""", unsafe_allow_html=True)
+
 if choice == "뽀모도로 타이머":
     st.header("⏰ 뽀모도로 타이머")
     st.write("공부 시간을 설정하고 타이머를 시작하세요. 타이머 기록은 하단에 저장됩니다.")
