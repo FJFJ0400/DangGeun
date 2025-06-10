@@ -45,7 +45,7 @@ if "group_id" not in st.session_state or "group_name" not in st.session_state:
         label=" ",
         value="",
         key="group_name_input",
-        placeholder="예시) 스타복스 6월 9일 오후 1시 <4명>"
+        placeholder="예시) 스타벅스 6월 9일 오후 1시 <4명>"
     )
     if st.button("START"):
         if group_name.strip():
