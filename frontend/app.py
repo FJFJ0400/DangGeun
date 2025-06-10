@@ -18,7 +18,26 @@ def get_my_ip():
         return "local"
 
 st.set_page_config(page_title="당근 스터디 모임", layout="wide")
-st.title("🥕 당근 스터디 모임")
+
+# 최초 진입 시 그룹명 입력/입장 화면 강제
+if "group_id" not in st.session_state or "group_name" not in st.session_state:
+    st.markdown("<h1 style='text-align:center;'>🥕 당근 스터디 시작하기</h1>", unsafe_allow_html=True)
+    st.write("<div style='text-align:center;'>스터디명(그룹명)을 입력하세요.</div>", unsafe_allow_html=True)
+    group_name = st.text_input("스터디명", "", key="group_name_input")
+    if st.button("START"):
+        if group_name.strip():
+            resp = requests.post(f"{API_URL}/group/create", params={"name": group_name.strip()})
+            if resp.status_code == 200:
+                group_id = resp.json()["group_id"]
+                st.session_state["group_id"] = group_id
+                st.session_state["group_name"] = group_name.strip()
+                st.experimental_rerun()
+            else:
+                st.error("그룹 생성/입장 실패: " + resp.text)
+    st.stop()
+
+# 그룹명 상단에 표시
+st.markdown(f"<h2 style='text-align:center;'>🥕 {st.session_state.get('group_name', '')} 스터디</h2>", unsafe_allow_html=True)
 
 # 사이드바 안내 메시지
 with st.sidebar:
@@ -28,6 +47,7 @@ with st.sidebar:
     choice = st.radio("메뉴", menu)
 
 my_ip = get_my_ip()
+group_id = st.session_state["group_id"]
 
 hobang_url = "https://i.imgur.com/0XKzn8F.png"
 
@@ -185,8 +205,10 @@ if choice == "뽀모도로 타이머":
     st.markdown("---")
     st.subheader("나의 타이머 기록")
     try:
-        logs = requests.get(f"{API_URL}/timerlog/feed").json()
-        if logs:
+        logs = requests.get(f"{API_URL}/timerlog/feed", params={"group_id": group_id}).json()
+        if isinstance(logs, dict) and "detail" in logs:
+            st.error(f"기록 불러오기 실패: {logs['detail']}")
+        elif logs:
             for log in logs:
                 st.write(f"- {log['start_time']} ~ {log['end_time']} | 설정: {log['set_seconds']//60}분 {log['set_seconds']%60}초")
         else:
@@ -204,7 +226,7 @@ elif choice == "인증 업로드":
             response = requests.post(
                 f"{API_URL}/upload",
                 files={"image": (uploaded_file.name, uploaded_file, uploaded_file.type)},
-                data={"comment": comment}
+                data={"comment": comment, "group_id": group_id}
             )
             if response.status_code == 200:
                 st.success("업로드 성공!")
@@ -216,7 +238,7 @@ elif choice == "인증 업로드":
 elif choice == "실시간 피드":
     st.header("📰 실시간 피드")
     try:
-        feed = requests.get(f"{API_URL}/feed").json()
+        feed = requests.get(f"{API_URL}/feed", params={"group_id": group_id}).json()
         for post in feed:
             image_url = post["image_url"]
             if image_url.startswith("/"):
@@ -240,7 +262,7 @@ elif choice == "통계":
     st.header("📊 나의 통계")
     st.info("통계는 이미지 인증 업로드(인증 업로드 메뉴)만 집계됩니다. 타이머 기록은 통계에 포함되지 않습니다.")
     try:
-        stats = requests.get(f"{API_URL}/stats/{my_ip}").json()
+        stats = requests.get(f"{API_URL}/stats/{my_ip}", params={"group_id": group_id}).json()
         st.metric("총 인증 수", stats["total_logs"])
         st.metric("연속 인증 일수", stats["streak_days"])
         st.metric("오늘 인증 여부", "O" if stats["today_logged"] else "X")
