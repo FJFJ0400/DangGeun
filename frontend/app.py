@@ -29,7 +29,7 @@ with st.sidebar:
 
 my_ip = get_my_ip()
 
-hobang_url = "https://i.imgur.com/0XKzn8F.png"
+hobang_url = "https://imgur.com/a/dHw8U1n"
 
 st.markdown(f"""
     <style>
