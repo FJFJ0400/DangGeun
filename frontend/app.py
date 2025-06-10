@@ -23,7 +23,7 @@ st.title("🥕 당근 스터디 모임")
 # 사이드바 안내 메시지
 with st.sidebar:
     st.markdown("### 🥕 당근 스터디")
-    st.info("회원가입/로그인 없이 IP 기반으로 기록이 저장됩니다.")
+    st.info("함께 하면 더 오래, 멀리 갈 수 있어요. just do it, together")
     menu = ["뽀모도로 타이머", "인증 업로드", "실시간 피드", "통계"]
     choice = st.selectbox("메뉴", menu)
 
