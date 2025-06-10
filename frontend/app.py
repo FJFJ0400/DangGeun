@@ -55,6 +55,8 @@ if choice == "뽀모도로 타이머":
         st.session_state.timer_paused = False
     if 'timer_pause_left' not in st.session_state:
         st.session_state.timer_pause_left = None
+    if 'timer_force_zero' not in st.session_state:
+        st.session_state.timer_force_zero = False
 
     # 버튼 UI
     col_btn1, col_btn2, col_btn3, col_btn4 = st.columns([1,1,1,1])
@@ -74,12 +76,14 @@ if choice == "뽀모도로 타이머":
         st.session_state.timer_end = (datetime.now() + timedelta(seconds=set_seconds)).isoformat()
         st.session_state.timer_paused = False
         st.session_state.timer_pause_left = None
+        st.session_state.timer_force_zero = False
     if reset_btn:
         st.session_state.timer_running = False
         st.session_state.timer_end = None
         st.session_state.timer_set_seconds = set_seconds
         st.session_state.timer_paused = False
         st.session_state.timer_pause_left = None
+        st.session_state.timer_force_zero = False
     if stop_btn and st.session_state.timer_running:
         # 중간끝내기: 즉시 기록 저장
         st.session_state.timer_running = False
@@ -87,7 +91,10 @@ if choice == "뽀모도로 타이머":
         st.session_state.timer_pause_left = None
         now = datetime.now()
         end_time = now
-        start_time = now - timedelta(seconds=st.session_state.timer_set_seconds)
+        if st.session_state.timer_end:
+            start_time = end_time - timedelta(seconds=st.session_state.timer_set_seconds)
+        else:
+            start_time = end_time
         st.success("타이머가 중간에 종료되었습니다. 기록이 저장됩니다.")
         try:
             requests.post(f"{API_URL}/timerlog/upload", data={
@@ -98,6 +105,7 @@ if choice == "뽀모도로 타이머":
         except Exception as e:
             st.error(f"기록 저장 실패: {e}")
         st.session_state.timer_end = None
+        st.session_state.timer_force_zero = True
     if pause_btn and (st.session_state.timer_running or st.session_state.timer_paused):
         if not st.session_state.timer_paused and st.session_state.timer_running:
             # 일시정지
@@ -114,9 +122,13 @@ if choice == "뽀모도로 타이머":
             st.session_state.timer_running = True
             st.session_state.timer_paused = False
             st.session_state.timer_pause_left = None
+            st.session_state.timer_force_zero = False
 
     # 남은 시간 계산 및 표시
-    if st.session_state.timer_running and st.session_state.timer_end:
+    if st.session_state.timer_force_zero:
+        h, m, s = 0, 0, 0
+        st.markdown(f"## ⏳ 남은 시간: {int(h):02d}:{int(m):02d}:{int(s):02d}")
+    elif st.session_state.timer_running and st.session_state.timer_end:
         end_time = datetime.fromisoformat(st.session_state.timer_end)
         left = int((end_time - datetime.now()).total_seconds())
         if left <= 0:
@@ -137,6 +149,7 @@ if choice == "뽀모도로 타이머":
         h, m = divmod(left, 3600)
         m, s = divmod(m, 60)
         st.markdown(f"## ⏳ 남은 시간: {int(h):02d}:{int(m):02d}:{int(s):02d}")
+        st.session_state.timer_force_zero = False
     elif st.session_state.timer_paused and st.session_state.timer_pause_left is not None:
         left = st.session_state.timer_pause_left
         h, m = divmod(left, 3600)
