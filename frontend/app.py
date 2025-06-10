@@ -19,6 +19,34 @@ def get_my_ip():
 
 st.set_page_config(page_title="당근 스터디 모임", layout="wide")
 
+st.markdown("""
+    <style>
+    /* 반응형 폰트/여백/버튼 */
+    html, body, [data-testid="stAppViewContainer"] {
+        font-size: 18px;
+    }
+    @media (max-width: 600px) {
+        html, body, [data-testid="stAppViewContainer"] {
+            font-size: 15px !important;
+        }
+        .mobile-hide { display: none !important; }
+        .mobile-full { width: 100% !important; }
+        .stButton>button, .stTextInput>div>input, .stTextArea>div>textarea {
+            font-size: 1em !important;
+            width: 100% !important;
+        }
+        .stFileUploader { width: 100% !important; }
+    }
+    @media (min-width: 601px) {
+        .desktop-hide { display: none !important; }
+    }
+    /* 입력 박스 중앙 정렬 */
+    div[data-testid="stTextInput"] {
+        margin: 0 auto;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # 최초 진입 시 그룹명 입력/입장 화면 강제
 if "group_id" not in st.session_state or "group_name" not in st.session_state:
     st.markdown("<h1 style='text-align:center;'>🥕 당근 스터디 시작하기</h1>", unsafe_allow_html=True)
@@ -66,8 +94,39 @@ st.markdown(f"<h2 style='text-align:center;'>🥕 {st.session_state.get('group_n
 with st.sidebar:
     st.markdown("### 🥕 당근 스터디")
     st.info("함께 하면 더 오래, 멀리 갈 수 있어요. just do it, together")
-    menu = ["뽀모도로 타이머", "인증 업로드", "실시간 피드", "통계"]
-    choice = st.radio("메뉴", menu)
+    
+    # 메뉴 스타일 정의
+    st.markdown("""
+        <style>
+        div[data-testid="stButton"] button {
+            width: 100%;
+            text-align: left;
+            padding: 10px 15px;
+            margin: 5px 0;
+            border: none;
+            background-color: transparent;
+            color: #262730;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        div[data-testid="stButton"] button:hover {
+            background-color: #f0f2f6;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # 메뉴 항목들
+    menu_items = ["뽀모도로 타이머", "인증 업로드", "실시간 피드", "통계"]
+    choice = None
+    
+    for item in menu_items:
+        if st.button(item, key=f"menu_{item}"):
+            choice = item
+            st.session_state.menu_choice = item
+    
+    # 세션 상태에서 선택된 메뉴 가져오기
+    if 'menu_choice' in st.session_state:
+        choice = st.session_state.menu_choice
 
 my_ip = get_my_ip()
 group_id = st.session_state["group_id"]
@@ -250,10 +309,10 @@ if choice == "뽀모도로 타이머":
         st.error(f"기록 불러오기 실패: {e}")
 
 elif choice == "인증 업로드":
-    st.header("📸 인증 업로드")
-    st.write("공부 인증 이미지를 업로드하고 코멘트를 남겨보세요.")
+    st.header("📸 공부 인증 업로드")
+    st.write("공부한 내용을 간단히 남겨주세요.")
     uploaded_file = st.file_uploader("이미지 업로드", type=["jpg", "jpeg", "png", "gif", "bmp", "webp"])
-    comment = st.text_area("코멘트 입력")
+    comment = st.text_area("공부 내용 입력")
     if st.button("업로드") and uploaded_file:
         try:
             response = requests.post(
