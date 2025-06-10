@@ -44,24 +44,75 @@ if choice == "뽀모도로 타이머":
     # 1초마다 새로고침
     st_autorefresh(interval=1000, key="timer_refresh")
 
+    # 세션 상태 초기화
     if 'timer_running' not in st.session_state:
         st.session_state.timer_running = False
     if 'timer_end' not in st.session_state:
         st.session_state.timer_end = None
     if 'timer_set_seconds' not in st.session_state:
         st.session_state.timer_set_seconds = set_seconds
+    if 'timer_paused' not in st.session_state:
+        st.session_state.timer_paused = False
+    if 'timer_pause_left' not in st.session_state:
+        st.session_state.timer_pause_left = None
 
-    start_btn = st.button("START")
-    reset_btn = st.button("RESET")
+    # 버튼 UI
+    col_btn1, col_btn2, col_btn3, col_btn4 = st.columns([1,1,1,1])
+    with col_btn1:
+        start_btn = st.button("시작")
+    with col_btn2:
+        reset_btn = st.button("재설정")
+    with col_btn3:
+        stop_btn = st.button("중간끝내기")
+    with col_btn4:
+        pause_btn = st.button("= 일시 정지" if not st.session_state.timer_paused else "▶ 재시작")
 
+    # 버튼 동작
     if start_btn:
         st.session_state.timer_running = True
         st.session_state.timer_set_seconds = set_seconds
         st.session_state.timer_end = (datetime.now() + timedelta(seconds=set_seconds)).isoformat()
+        st.session_state.timer_paused = False
+        st.session_state.timer_pause_left = None
     if reset_btn:
         st.session_state.timer_running = False
         st.session_state.timer_end = None
         st.session_state.timer_set_seconds = set_seconds
+        st.session_state.timer_paused = False
+        st.session_state.timer_pause_left = None
+    if stop_btn and st.session_state.timer_running:
+        # 중간끝내기: 즉시 기록 저장
+        st.session_state.timer_running = False
+        st.session_state.timer_paused = False
+        st.session_state.timer_pause_left = None
+        now = datetime.now()
+        end_time = now
+        start_time = now - timedelta(seconds=st.session_state.timer_set_seconds)
+        st.success("타이머가 중간에 종료되었습니다. 기록이 저장됩니다.")
+        try:
+            requests.post(f"{API_URL}/timerlog/upload", data={
+                "set_seconds": st.session_state.timer_set_seconds,
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat()
+            })
+        except Exception as e:
+            st.error(f"기록 저장 실패: {e}")
+        st.session_state.timer_end = None
+    if pause_btn and st.session_state.timer_running:
+        if not st.session_state.timer_paused:
+            # 일시정지
+            end_time = datetime.fromisoformat(st.session_state.timer_end)
+            left = int((end_time - datetime.now()).total_seconds())
+            st.session_state.timer_paused = True
+            st.session_state.timer_pause_left = left
+            st.session_state.timer_running = False
+        else:
+            # 재시작
+            left = st.session_state.timer_pause_left
+            st.session_state.timer_end = (datetime.now() + timedelta(seconds=left)).isoformat()
+            st.session_state.timer_running = True
+            st.session_state.timer_paused = False
+            st.session_state.timer_pause_left = None
 
     # 남은 시간 계산 및 표시
     if st.session_state.timer_running and st.session_state.timer_end:
@@ -70,6 +121,8 @@ if choice == "뽀모도로 타이머":
         if left <= 0:
             st.session_state.timer_running = False
             st.session_state.timer_end = None
+            st.session_state.timer_paused = False
+            st.session_state.timer_pause_left = None
             st.success("타이머 종료! 기록이 저장됩니다.")
             try:
                 requests.post(f"{API_URL}/timerlog/upload", data={
@@ -83,6 +136,11 @@ if choice == "뽀모도로 타이머":
         h, m = divmod(left, 3600)
         m, s = divmod(m, 60)
         st.markdown(f"## ⏳ 남은 시간: {int(h):02d}:{int(m):02d}:{int(s):02d}")
+    elif st.session_state.timer_paused and st.session_state.timer_pause_left is not None:
+        left = st.session_state.timer_pause_left
+        h, m = divmod(left, 3600)
+        m, s = divmod(m, 60)
+        st.markdown(f"## ⏳ 남은 시간: {int(h):02d}:{int(m):02d}:{int(s):02d} (일시정지)")
     else:
         h, m = divmod(set_seconds, 3600)
         m, s = divmod(m, 60)
