@@ -200,8 +200,13 @@ elif choice == "실시간 피드":
             image_url = post["image_url"]
             if image_url.startswith("/"):
                 image_url = API_URL + image_url
-            # 이미지 세로 직사각형 스타일로 표시
-            st.image(image_url, width=220, clamp=True, output_format="JPEG")
+            # 이미지 원본을 직접 불러와서 출력
+            try:
+                img_response = requests.get(image_url)
+                img = Image.open(io.BytesIO(img_response.content))
+                st.image(img, use_column_width=False)
+            except Exception as e:
+                st.warning("이미지 로드 실패")
             st.markdown(f"<div style='font-size:1.1em; margin-top:8px; margin-bottom:4px;'><b>{post['comment']}</b></div>", unsafe_allow_html=True)
             st.caption(f"IP: {post['user_id']} | {post['created_at']}")
             st.markdown("---")
