@@ -25,7 +25,7 @@ with st.sidebar:
     st.markdown("### 🥕 당근 스터디")
     st.info("함께 하면 더 오래, 멀리 갈 수 있어요. just do it, together")
     menu = ["뽀모도로 타이머", "인증 업로드", "실시간 피드", "통계"]
-    choice = st.selectbox("메뉴", menu)
+    choice = st.radio("메뉴", menu)
 
 my_ip = get_my_ip()
 
