@@ -84,14 +84,16 @@ if choice == "뽀모도로 타이머":
         st.session_state.timer_paused = False
         st.session_state.timer_pause_left = None
         st.session_state.timer_force_zero = False
-    if stop_btn and st.session_state.timer_running:
+    if stop_btn and (st.session_state.timer_running or st.session_state.timer_paused):
         # 중간끝내기: 즉시 기록 저장
         st.session_state.timer_running = False
         st.session_state.timer_paused = False
-        st.session_state.timer_pause_left = None
         now = datetime.now()
         end_time = now
-        if st.session_state.timer_end:
+        # 일시정지 상태라면 남은 시간에서 start_time 계산
+        if st.session_state.timer_paused and st.session_state.timer_pause_left is not None:
+            start_time = end_time - timedelta(seconds=st.session_state.timer_pause_left)
+        elif st.session_state.timer_end:
             start_time = end_time - timedelta(seconds=st.session_state.timer_set_seconds)
         else:
             start_time = end_time
@@ -105,6 +107,7 @@ if choice == "뽀모도로 타이머":
         except Exception as e:
             st.error(f"기록 저장 실패: {e}")
         st.session_state.timer_end = None
+        st.session_state.timer_pause_left = None
         st.session_state.timer_force_zero = True
     if pause_btn and (st.session_state.timer_running or st.session_state.timer_paused):
         if not st.session_state.timer_paused and st.session_state.timer_running:
