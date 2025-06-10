@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timedelta
 import pandas as pd
 import plotly.express as px
-from PIL import Image
+from PIL import Image, ImageOps
 import io
 from streamlit_autorefresh import st_autorefresh
 
@@ -202,11 +202,13 @@ elif choice == "실시간 피드":
             image_url = post["image_url"]
             if image_url.startswith("/"):
                 image_url = API_URL + image_url
-            # 이미지 원본을 직접 불러와서 출력
+            # 이미지 원본을 직접 불러와서 4:3(400x300) 비율로 맞춤
             try:
                 img_response = requests.get(image_url)
-                img = Image.open(io.BytesIO(img_response.content))
-                st.image(img, use_container_width=True)
+                img = Image.open(io.BytesIO(img_response.content)).convert("RGB")
+                target_size = (400, 300)
+                img = ImageOps.pad(img, target_size, color=(255,255,255), centering=(0.5,0.5))
+                st.image(img, width=400)
             except Exception as e:
                 st.warning("이미지 로드 실패")
             st.markdown(f"<div style='font-size:1.1em; margin-top:8px; margin-bottom:4px;'><b>{post['comment']}</b></div>", unsafe_allow_html=True)
