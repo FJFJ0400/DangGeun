@@ -98,15 +98,16 @@ if choice == "뽀모도로 타이머":
         except Exception as e:
             st.error(f"기록 저장 실패: {e}")
         st.session_state.timer_end = None
-    if pause_btn and st.session_state.timer_running:
-        if not st.session_state.timer_paused:
+    if pause_btn and (st.session_state.timer_running or st.session_state.timer_paused):
+        if not st.session_state.timer_paused and st.session_state.timer_running:
             # 일시정지
             end_time = datetime.fromisoformat(st.session_state.timer_end)
             left = int((end_time - datetime.now()).total_seconds())
             st.session_state.timer_paused = True
             st.session_state.timer_pause_left = left
             st.session_state.timer_running = False
-        else:
+            st.session_state.timer_end = None
+        elif st.session_state.timer_paused:
             # 재시작
             left = st.session_state.timer_pause_left
             st.session_state.timer_end = (datetime.now() + timedelta(seconds=left)).isoformat()
