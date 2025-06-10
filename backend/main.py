@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 from typing import Optional, List
 import os, shutil, datetime
 import models, database, schemas
+import re
+import traceback
 
 app = FastAPI()
 
@@ -31,7 +33,8 @@ def upload_study_log(
     ip = request.client.host
     try:
         os.makedirs(UPLOAD_DIR, exist_ok=True)
-        filename = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_{image.filename}"
+        safe_filename = re.sub(r'[^a-zA-Z0-9_.-]', '_', image.filename)
+        filename = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_{safe_filename}"
         file_path = os.path.join(UPLOAD_DIR, filename)
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
@@ -56,6 +59,7 @@ def upload_study_log(
         db.commit()
         return {"status": "success", "log_id": log.id, "image_url": image_url}
     except Exception as e:
+        print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"업로드 실패: {e}")
 
 @app.get("/feed")
