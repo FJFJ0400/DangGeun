@@ -45,7 +45,7 @@ if "group_id" not in st.session_state or "group_name" not in st.session_state:
         label=" ",
         value="",
         key="group_name_input",
-        placeholder="예시) 스타복수 6월 9일 오후 1시 <4명>"
+        placeholder="예시) 스타복스 6월 9일 오후 1시 <4명>"
     )
     if st.button("START"):
         if group_name.strip():
@@ -54,7 +54,7 @@ if "group_id" not in st.session_state or "group_name" not in st.session_state:
                 group_id = resp.json()["group_id"]
                 st.session_state["group_id"] = group_id
                 st.session_state["group_name"] = group_name.strip()
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("그룹 생성/입장 실패: " + resp.text)
     st.stop()
