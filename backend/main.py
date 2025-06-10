@@ -23,9 +23,26 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 UPLOAD_DIR = "static/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+@app.post("/group/create")
+def create_group(name: str, db: Session = Depends(database.get_db)):
+    group = db.query(models.StudyGroup).filter_by(name=name).first()
+    if group:
+        return {"group_id": group.id, "name": group.name}
+    group = models.StudyGroup(name=name)
+    db.add(group)
+    db.commit()
+    db.refresh(group)
+    return {"group_id": group.id, "name": group.name}
+
+@app.get("/group/list")
+def list_groups(db: Session = Depends(database.get_db)):
+    groups = db.query(models.StudyGroup).all()
+    return [{"group_id": g.id, "name": g.name} for g in groups]
+
 @app.post("/upload")
 def upload_study_log(
     request: Request,
+    group_id: int = Form(...),
     image: UploadFile = File(...),
     comment: str = Form(...),
     db: Session = Depends(database.get_db)
@@ -39,15 +56,15 @@ def upload_study_log(
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
         image_url = f"/static/uploads/{filename}"
-        log = models.StudyLog(user_id=ip, image_url=image_url, comment=comment)
+        log = models.StudyLog(group_id=group_id, user_id=ip, image_url=image_url, comment=comment)
         db.add(log)
         db.commit()
         db.refresh(log)
-        # 통계 갱신
-        stat = db.query(models.StudyStat).filter_by(user_id=ip).first()
+        # 통계 갱신 (group_id별)
+        stat = db.query(models.StudyStat).filter_by(group_id=group_id, user_id=ip).first()
         now = datetime.datetime.now().date()
         if not stat:
-            stat = models.StudyStat(user_id=ip, total_logs=1, total_likes=0, streak_days=1, last_log_date=now)
+            stat = models.StudyStat(group_id=group_id, user_id=ip, total_logs=1, total_likes=0, streak_days=1, last_log_date=now)
             db.add(stat)
         else:
             stat.total_logs += 1
@@ -70,8 +87,8 @@ def upload_study_log(
         raise HTTPException(status_code=500, detail=f"업로드 실패: {e}")
 
 @app.get("/feed")
-def get_feed(sort: Optional[str] = "recent", db: Session = Depends(database.get_db)):
-    logs = db.query(models.StudyLog).order_by(models.StudyLog.created_at.desc()).all()
+def get_feed(group_id: int, sort: Optional[str] = "recent", db: Session = Depends(database.get_db)):
+    logs = db.query(models.StudyLog).filter_by(group_id=group_id).order_by(models.StudyLog.created_at.desc()).all()
     if sort == "popular":
         logs = sorted(logs, key=lambda l: len(db.query(models.Like).filter_by(study_log_id=l.id).all()), reverse=True)
     feed = []
@@ -112,8 +129,8 @@ def add_comment(user_id: int = Form(...), log_id: int = Form(...), content: str 
     return {"status": "commented"}
 
 @app.get("/stats/{ip}")
-def get_stats(ip: str, db: Session = Depends(database.get_db)):
-    stat = db.query(models.StudyStat).filter_by(user_id=ip).first()
+def get_stats(ip: str, group_id: int, db: Session = Depends(database.get_db)):
+    stat = db.query(models.StudyStat).filter_by(group_id=group_id, user_id=ip).first()
     today = datetime.datetime.now().date()
     today_logged = False
     if stat and stat.last_log_date and stat.last_log_date == today:
@@ -128,6 +145,7 @@ def get_stats(ip: str, db: Session = Depends(database.get_db)):
 @app.post("/timerlog/upload")
 def upload_timer_log(
     request: Request,
+    group_id: int = Form(...),
     set_seconds: int = Form(...),
     start_time: str = Form(...),
     end_time: str = Form(...),
@@ -136,16 +154,16 @@ def upload_timer_log(
     ip = request.client.host
     start_dt = datetime.datetime.fromisoformat(start_time)
     end_dt = datetime.datetime.fromisoformat(end_time)
-    log = models.TimerLog(user_id=ip, set_seconds=set_seconds, start_time=start_dt, end_time=end_dt)
+    log = models.TimerLog(group_id=group_id, user_id=ip, set_seconds=set_seconds, start_time=start_dt, end_time=end_dt)
     db.add(log)
     db.commit()
     db.refresh(log)
     return {"status": "success", "log_id": log.id}
 
 @app.get("/timerlog/feed")
-def get_timer_log_feed(request: Request, db: Session = Depends(database.get_db)):
+def get_timer_log_feed(request: Request, group_id: int, db: Session = Depends(database.get_db)):
     ip = request.client.host
-    logs = db.query(models.TimerLog).filter_by(user_id=ip).order_by(models.TimerLog.created_at.desc()).all()
+    logs = db.query(models.TimerLog).filter_by(group_id=group_id, user_id=ip).order_by(models.TimerLog.created_at.desc()).all()
     return [
         {
             "id": log.id,

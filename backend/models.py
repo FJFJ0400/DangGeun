@@ -12,9 +12,16 @@ class User(Base):
     nickname = Column(String(50), unique=True, nullable=False)
     created_at = Column(DateTime, default=func.now())
 
+class StudyGroup(Base):
+    __tablename__ = 'studygroups'
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True)
+    created_at = Column(DateTime, default=func.now())
+
 class StudyLog(Base):
     __tablename__ = 'studylogs'
     id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey('studygroups.id'))
     user_id = Column(String(50))
     image_url = Column(String(255))
     comment = Column(String(100))
@@ -37,6 +44,7 @@ class Comment(Base):
 
 class StudyStat(Base):
     __tablename__ = 'studystats'
+    group_id = Column(Integer, ForeignKey('studygroups.id'), primary_key=True)
     user_id = Column(String(50), primary_key=True)
     total_logs = Column(Integer, default=0)
     total_likes = Column(Integer, default=0)
@@ -47,6 +55,7 @@ class StudyStat(Base):
 class TimerLog(Base):
     __tablename__ = 'timerlogs'
     id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey('studygroups.id'))
     user_id = Column(String(50))  # IP 주소
     set_seconds = Column(Integer)  # 설정한 타이머(초)
     start_time = Column(DateTime, default=func.now())
