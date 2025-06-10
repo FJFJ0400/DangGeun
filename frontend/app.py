@@ -82,6 +82,7 @@ if "group_id" not in st.session_state or "group_name" not in st.session_state:
                 group_id = resp.json()["group_id"]
                 st.session_state["group_id"] = group_id
                 st.session_state["group_name"] = group_name.strip()
+                st.session_state["choice"] = "뽀모도로 타이머"
                 st.rerun()
             else:
                 st.error("그룹 생성/입장 실패: " + resp.text)
@@ -90,106 +91,12 @@ if "group_id" not in st.session_state or "group_name" not in st.session_state:
 # 그룹명 상단에 표시
 st.markdown(f"<h2 style='text-align:center;'>🥕 {st.session_state.get('group_name', '')} 스터디</h2>", unsafe_allow_html=True)
 
-# --- 사이드바 토글 버튼 커스텀 ---
-# 기본 토글 버튼 숨기기
-st.markdown("""
-    <style>
-    [data-testid="collapsedControl"] {
-        display: none !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# 커스텀 토글 버튼 (상단 고정, 크고 주황색, 모바일에서 더 큼)
-sidebar_toggle_btn = '''
-    <style>
-    .custom-sidebar-toggle {
-        position: fixed;
-        top: 18px;
-        left: 18px;
-        z-index: 9999;
-        background: #ff9800;
-        color: white;
-        border: none;
-        border-radius: 50px;
-        padding: 12px 28px 12px 18px;
-        font-size: 1.3em;
-        font-weight: bold;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: background 0.2s, transform 0.1s;
-        animation: blink 1.2s infinite alternate;
-    }
-    .custom-sidebar-toggle:hover {
-        background: #ffb74d;
-        transform: scale(1.05);
-    }
-    @keyframes blink {
-        0% { filter: brightness(1); }
-        100% { filter: brightness(1.3); }
-    }
-    @media (max-width: 600px) {
-        .custom-sidebar-toggle {
-            top: 10px;
-            left: 10px;
-            font-size: 1.1em;
-            padding: 14px 32px 14px 16px;
-        }
-    }
-    </style>
-    <button class="custom-sidebar-toggle" onclick="document.querySelector('[data-testid=\'stSidebar\']').classList.toggle('sidebar-collapsed')">
-        <span style="font-size:1.5em;">☰</span> <span>메뉴</span>
-    </button>
-    <script>
-    // 사이드바 토글 기능 (Streamlit 내부 구조에 의존)
-    const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
-    if (sidebar) {
-        sidebar.classList.remove('sidebar-collapsed');
-    }
-    </script>
-'''
-st.markdown(sidebar_toggle_btn, unsafe_allow_html=True)
-
 # 사이드바 안내 메시지
 with st.sidebar:
     st.markdown("### 🥕 당근 스터디")
     st.info("함께 하면 더 오래, 멀리 갈 수 있어요. just do it, together")
-    
-    # 메뉴 스타일 정의
-    st.markdown("""
-        <style>
-        div[data-testid="stButton"] button {
-            width: 100%;
-            text-align: left;
-            padding: 10px 15px;
-            margin: 5px 0;
-            border: none;
-            background-color: transparent;
-            color: #262730;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-        }
-        div[data-testid="stButton"] button:hover {
-            background-color: #f0f2f6;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-    
-    # 메뉴 항목들
-    menu_items = ["뽀모도로 타이머", "인증 업로드", "실시간 피드", "통계"]
-    choice = None
-    
-    for item in menu_items:
-        if st.button(item, key=f"menu_{item}"):
-            choice = item
-            st.session_state.menu_choice = item
-    
-    # 세션 상태에서 선택된 메뉴 가져오기
-    if 'menu_choice' in st.session_state:
-        choice = st.session_state.menu_choice
+    menu = ["뽀모도로 타이머", "인증 업로드", "실시간 피드", "통계"]
+    choice = st.radio("메뉴", menu, key="choice")
 
 my_ip = get_my_ip()
 group_id = st.session_state["group_id"]
