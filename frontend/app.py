@@ -2,11 +2,11 @@ import streamlit as st
 import requests
 import os
 from datetime import datetime, timedelta
-import time
 import pandas as pd
 import plotly.express as px
 from PIL import Image
 import io
+from streamlit_autorefresh import st_autorefresh
 
 # API 엔드포인트 설정 (환경변수 우선)
 API_URL = os.environ.get("API_URL", "http://localhost:10000")
@@ -41,52 +41,52 @@ if choice == "뽀모도로 타이머":
         seconds = st.number_input("초", min_value=0, max_value=59, value=0, step=1)
     set_seconds = int(hours * 3600 + minutes * 60 + seconds)
 
+    # 1초마다 새로고침
+    st_autorefresh(interval=1000, key="timer_refresh")
+
     if 'timer_running' not in st.session_state:
         st.session_state.timer_running = False
-    if 'timer_left' not in st.session_state:
-        st.session_state.timer_left = set_seconds
-    if 'timer_start' not in st.session_state:
-        st.session_state.timer_start = None
+    if 'timer_end' not in st.session_state:
+        st.session_state.timer_end = None
+    if 'timer_set_seconds' not in st.session_state:
+        st.session_state.timer_set_seconds = set_seconds
 
-    timer_placeholder = st.empty()
     start_btn = st.button("START")
     reset_btn = st.button("RESET")
 
-    # 버튼 클릭 시 세션 상태만 변경
     if start_btn:
         st.session_state.timer_running = True
-        st.session_state.timer_left = set_seconds
-        st.session_state.timer_start = datetime.now().isoformat()
+        st.session_state.timer_set_seconds = set_seconds
+        st.session_state.timer_end = (datetime.now() + timedelta(seconds=set_seconds)).isoformat()
     if reset_btn:
         st.session_state.timer_running = False
-        st.session_state.timer_left = set_seconds
-        st.session_state.timer_start = None
+        st.session_state.timer_end = None
+        st.session_state.timer_set_seconds = set_seconds
 
-    # 타이머 동작
-    if st.session_state.timer_running:
-        # Streamlit은 자동 새로고침이 없으므로, 사용자가 수동 새로고침해야 함
-        elapsed = (datetime.now() - datetime.fromisoformat(st.session_state.timer_start)).total_seconds()
-        left = max(0, st.session_state.timer_left - int(elapsed))
-        m, s = divmod(left, 60)
-        h, m = divmod(m, 60)
-        timer_placeholder.markdown(f"## ⏳ 남은 시간: {int(h):02d}:{int(m):02d}:{int(s):02d}")
-        if left == 0:
+    # 남은 시간 계산 및 표시
+    if st.session_state.timer_running and st.session_state.timer_end:
+        end_time = datetime.fromisoformat(st.session_state.timer_end)
+        left = int((end_time - datetime.now()).total_seconds())
+        if left <= 0:
             st.session_state.timer_running = False
+            st.session_state.timer_end = None
             st.success("타이머 종료! 기록이 저장됩니다.")
             try:
                 requests.post(f"{API_URL}/timerlog/upload", data={
-                    "set_seconds": set_seconds,
-                    "start_time": st.session_state.timer_start,
-                    "end_time": datetime.now().isoformat()
+                    "set_seconds": st.session_state.timer_set_seconds,
+                    "start_time": (end_time - timedelta(seconds=st.session_state.timer_set_seconds)).isoformat(),
+                    "end_time": end_time.isoformat()
                 })
             except Exception as e:
                 st.error(f"기록 저장 실패: {e}")
-            st.session_state.timer_left = set_seconds
-            st.session_state.timer_start = None
+            left = 0
+        h, m = divmod(left, 3600)
+        m, s = divmod(m, 60)
+        st.markdown(f"## ⏳ 남은 시간: {int(h):02d}:{int(m):02d}:{int(s):02d}")
     else:
-        m, s = divmod(st.session_state.timer_left, 60)
-        h, m = divmod(m, 60)
-        timer_placeholder.markdown(f"## ⏳ 남은 시간: {int(h):02d}:{int(m):02d}:{int(s):02d}")
+        h, m = divmod(set_seconds, 3600)
+        m, s = divmod(m, 60)
+        st.markdown(f"## ⏳ 남은 시간: {int(h):02d}:{int(m):02d}:{int(s):02d}")
 
     st.markdown("---")
     st.subheader("나의 타이머 기록")
@@ -122,7 +122,10 @@ elif choice == "실시간 피드":
     try:
         feed = requests.get(f"{API_URL}/feed").json()
         for post in feed:
-            st.image(post["image_url"], width=200)
+            image_url = post["image_url"]
+            if image_url.startswith("/"):
+                image_url = API_URL + image_url
+            st.image(image_url, width=200)
             st.write(post["comment"])
             st.caption(f"IP: {post['user_id']} | {post['created_at']}")
             st.markdown("---")

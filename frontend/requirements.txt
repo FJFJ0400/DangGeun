@@ -3,4 +3,5 @@ requests
 pandas
 plotly
 pillow
-python-dotenv 
+python-dotenv
+streamlit_autorefresh 
