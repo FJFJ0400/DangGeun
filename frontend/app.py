@@ -90,6 +90,69 @@ if "group_id" not in st.session_state or "group_name" not in st.session_state:
 # 그룹명 상단에 표시
 st.markdown(f"<h2 style='text-align:center;'>🥕 {st.session_state.get('group_name', '')} 스터디</h2>", unsafe_allow_html=True)
 
+# --- 사이드바 토글 버튼 커스텀 ---
+# 기본 토글 버튼 숨기기
+st.markdown("""
+    <style>
+    [data-testid="collapsedControl"] {
+        display: none !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# 커스텀 토글 버튼 (상단 고정, 크고 주황색, 모바일에서 더 큼)
+sidebar_toggle_btn = '''
+    <style>
+    .custom-sidebar-toggle {
+        position: fixed;
+        top: 18px;
+        left: 18px;
+        z-index: 9999;
+        background: #ff9800;
+        color: white;
+        border: none;
+        border-radius: 50px;
+        padding: 12px 28px 12px 18px;
+        font-size: 1.3em;
+        font-weight: bold;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background 0.2s, transform 0.1s;
+        animation: blink 1.2s infinite alternate;
+    }
+    .custom-sidebar-toggle:hover {
+        background: #ffb74d;
+        transform: scale(1.05);
+    }
+    @keyframes blink {
+        0% { filter: brightness(1); }
+        100% { filter: brightness(1.3); }
+    }
+    @media (max-width: 600px) {
+        .custom-sidebar-toggle {
+            top: 10px;
+            left: 10px;
+            font-size: 1.1em;
+            padding: 14px 32px 14px 16px;
+        }
+    }
+    </style>
+    <button class="custom-sidebar-toggle" onclick="document.querySelector('[data-testid=\'stSidebar\']').classList.toggle('sidebar-collapsed')">
+        <span style="font-size:1.5em;">☰</span> <span>메뉴</span>
+    </button>
+    <script>
+    // 사이드바 토글 기능 (Streamlit 내부 구조에 의존)
+    const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
+    if (sidebar) {
+        sidebar.classList.remove('sidebar-collapsed');
+    }
+    </script>
+'''
+st.markdown(sidebar_toggle_btn, unsafe_allow_html=True)
+
 # 사이드바 안내 메시지
 with st.sidebar:
     st.markdown("### 🥕 당근 스터디")
