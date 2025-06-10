@@ -51,9 +51,16 @@ def upload_study_log(
             db.add(stat)
         else:
             stat.total_logs += 1
-            if stat.last_log_date is not None and (now - stat.last_log_date).days == 1:
-                stat.streak_days += 1
-            elif stat.last_log_date is None or (now - stat.last_log_date).days > 1:
+            last_log_date = stat.last_log_date
+            if last_log_date is not None:
+                if isinstance(last_log_date, datetime.datetime):
+                    last_log_date = last_log_date.date()
+                days_diff = (now - last_log_date).days
+                if days_diff == 1:
+                    stat.streak_days += 1
+                elif days_diff > 1:
+                    stat.streak_days = 1
+            else:
                 stat.streak_days = 1
             stat.last_log_date = now
         db.commit()

@@ -178,7 +178,7 @@ if choice == "뽀모도로 타이머":
 elif choice == "인증 업로드":
     st.header("📸 인증 업로드")
     st.write("공부 인증 이미지를 업로드하고 코멘트를 남겨보세요.")
-    uploaded_file = st.file_uploader("이미지 업로드", type=["jpg", "jpeg", "png"])
+    uploaded_file = st.file_uploader("이미지 업로드", type=["jpg", "jpeg", "png", "gif", "bmp", "webp"])
     comment = st.text_area("코멘트 입력")
     if st.button("업로드") and uploaded_file:
         try:
