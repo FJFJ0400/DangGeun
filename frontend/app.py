@@ -287,6 +287,7 @@ if choice == "뽀모도로 타이머":
 
 elif choice == "지켜보기 모드":
     st.header("🧑‍💻 자리 비움 감지 (얼굴 인식)")
+
     def init_away_state():
         if "away_status" not in st.session_state:
             st.session_state["away_status"] = "active"
