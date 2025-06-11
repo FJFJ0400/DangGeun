@@ -83,13 +83,17 @@ if "group_id" not in st.session_state or "group_name" not in st.session_state:
                 st.session_state["group_id"] = group_id
                 st.session_state["group_name"] = group_name.strip()
                 st.session_state["choice"] = "뽀모도로 타이머"
-                st.rerun()
+                st.experimental_rerun()
             else:
                 st.error("그룹 생성/입장 실패: " + resp.text)
     st.stop()
 
 # 그룹명 상단에 표시
 st.markdown(f"<h2 style='text-align:center;'>🥕 {st.session_state.get('group_name', '')} 스터디</h2>", unsafe_allow_html=True)
+
+# 세션에 choice가 없으면 기본값 지정
+if "choice" not in st.session_state:
+    st.session_state["choice"] = "뽀모도로 타이머"
 
 # 사이드바 안내 메시지
 with st.sidebar:
