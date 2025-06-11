@@ -7,9 +7,15 @@ import plotly.express as px
 from PIL import Image, ImageOps
 import io
 from streamlit_autorefresh import st_autorefresh
-import cv2
-import mediapipe as mp
 import time
+
+# 안전한 import (설치 안 된 환경 대응)
+try:
+    import cv2
+    import mediapipe as mp
+    CV2_AVAILABLE = True
+except ImportError:
+    CV2_AVAILABLE = False
 
 # API 엔드포인트 설정 (환경변수 우선)
 API_URL = os.environ.get("API_URL", "http://localhost:10000")
@@ -286,91 +292,94 @@ if choice == "뽀모도로 타이머":
         st.error(f"기록 불러오기 실패: {e}")
 
 elif choice == "지켜보기 모드":
-    st.header("🧑‍💻 자리 비움 감지 (얼굴 인식)")
+    if not CV2_AVAILABLE:
+        st.error("이 환경에서는 '지켜보기 모드'를 사용할 수 없습니다. (opencv-python/mediapipe 미설치)")
+    else:
+        st.header("🧑‍💻 자리 비움 감지 (얼굴 인식)")
 
-    def init_away_state():
-        if "away_status" not in st.session_state:
-            st.session_state["away_status"] = "active"
-        if "last_face_time" not in st.session_state:
-            st.session_state["last_face_time"] = time.time()
-        if "face_detected" not in st.session_state:
-            st.session_state["face_detected"] = False
-        if "watch_mode" not in st.session_state:
-            st.session_state["watch_mode"] = False
-        if "countdown" not in st.session_state:
-            st.session_state["countdown"] = 0
-    init_away_state()
-
-    FRAME_WINDOW = st.image([])
-    col1, col2 = st.columns([1,1])
-    with col1:
-        if not st.session_state["watch_mode"]:
-            if st.button('지켜보기 모드 시작', key="start_watch"):
-                st.session_state["countdown"] = 3
-                st.session_state["watch_mode"] = True
-        else:
-            if st.button('정지하기', key="stop_watch"):
-                st.session_state["watch_mode"] = False
+        def init_away_state():
+            if "away_status" not in st.session_state:
                 st.session_state["away_status"] = "active"
+            if "last_face_time" not in st.session_state:
+                st.session_state["last_face_time"] = time.time()
+            if "face_detected" not in st.session_state:
                 st.session_state["face_detected"] = False
+            if "watch_mode" not in st.session_state:
+                st.session_state["watch_mode"] = False
+            if "countdown" not in st.session_state:
+                st.session_state["countdown"] = 0
+        init_away_state()
+
+        FRAME_WINDOW = st.image([])
+        col1, col2 = st.columns([1,1])
+        with col1:
+            if not st.session_state["watch_mode"]:
+                if st.button('지켜보기 모드 시작', key="start_watch"):
+                    st.session_state["countdown"] = 3
+                    st.session_state["watch_mode"] = True
+            else:
+                if st.button('정지하기', key="stop_watch"):
+                    st.session_state["watch_mode"] = False
+                    st.session_state["away_status"] = "active"
+                    st.session_state["face_detected"] = False
+                    st.session_state["countdown"] = 0
+                    FRAME_WINDOW.empty()
+        with col2:
+            if st.session_state["watch_mode"]:
+                if st.session_state["away_status"] == "active":
+                    st.markdown('<span style="font-size:48px; color:green;">●</span> <span style="font-size:20px;">활동 중</span>', unsafe_allow_html=True)
+                else:
+                    st.markdown('<span style="font-size:48px; color:red;">●</span> <span style="font-size:20px;">자리 비움</span>', unsafe_allow_html=True)
+            else:
+                st.markdown('<span style="font-size:20px; color:gray;">대기 중</span>', unsafe_allow_html=True)
+
+        mp_face_detection = mp.solutions.face_detection
+        mp_drawing = mp.solutions.drawing_utils
+
+        if st.session_state["watch_mode"]:
+            # 카운트다운
+            if st.session_state["countdown"] > 0:
+                for i in range(st.session_state["countdown"], 0, -1):
+                    FRAME_WINDOW.empty()
+                    FRAME_WINDOW.markdown(f'<h1 style="text-align:center; font-size:72px;">{i}</h1>', unsafe_allow_html=True)
+                    time.sleep(1)
                 st.session_state["countdown"] = 0
                 FRAME_WINDOW.empty()
-    with col2:
-        if st.session_state["watch_mode"]:
-            if st.session_state["away_status"] == "active":
-                st.markdown('<span style="font-size:48px; color:green;">●</span> <span style="font-size:20px;">활동 중</span>', unsafe_allow_html=True)
-            else:
-                st.markdown('<span style="font-size:48px; color:red;">●</span> <span style="font-size:20px;">자리 비움</span>', unsafe_allow_html=True)
-        else:
-            st.markdown('<span style="font-size:20px; color:gray;">대기 중</span>', unsafe_allow_html=True)
-
-    mp_face_detection = mp.solutions.face_detection
-    mp_drawing = mp.solutions.drawing_utils
-
-    if st.session_state["watch_mode"]:
-        # 카운트다운
-        if st.session_state["countdown"] > 0:
-            for i in range(st.session_state["countdown"], 0, -1):
-                FRAME_WINDOW.empty()
-                FRAME_WINDOW.markdown(f'<h1 style="text-align:center; font-size:72px;">{i}</h1>', unsafe_allow_html=True)
-                time.sleep(1)
-            st.session_state["countdown"] = 0
+            # 감지 시작
+            cap = cv2.VideoCapture(0)
+            with mp_face_detection.FaceDetection(model_selection=0, min_detection_confidence=0.5) as face_detection:
+                while st.session_state["watch_mode"] and cap.isOpened():
+                    ret, frame = cap.read()
+                    if not ret:
+                        st.warning("웹캠을 찾을 수 없습니다.")
+                        break
+                    image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    results = face_detection.process(image)
+                    face_found = results.detections is not None and len(results.detections) > 0
+                    if face_found:
+                        for detection in results.detections:
+                            mp_drawing.draw_detection(image, detection)
+                    FRAME_WINDOW.image(image, channels='RGB')
+                    now = time.time()
+                    if face_found:
+                        st.session_state["last_face_time"] = now
+                        st.session_state["face_detected"] = True
+                        if st.session_state["away_status"] != "active":
+                            st.session_state["away_status"] = "active"
+                    else:
+                        st.session_state["face_detected"] = False
+                        if now - st.session_state["last_face_time"] > 10:
+                            if st.session_state["away_status"] != "away":
+                                st.session_state["away_status"] = "away"
+                                try:
+                                    requests.post(f"{API_URL}/status", data={"group_id": st.session_state.get("group_id", ""), "user_id": get_my_ip(), "status": "away"})
+                                except Exception as e:
+                                    st.warning(f"상태 전송 실패: {e}")
+                    time.sleep(0.1)
+                    if not st.session_state["watch_mode"]:
+                        break
+            cap.release()
             FRAME_WINDOW.empty()
-        # 감지 시작
-        cap = cv2.VideoCapture(0)
-        with mp_face_detection.FaceDetection(model_selection=0, min_detection_confidence=0.5) as face_detection:
-            while st.session_state["watch_mode"] and cap.isOpened():
-                ret, frame = cap.read()
-                if not ret:
-                    st.warning("웹캠을 찾을 수 없습니다.")
-                    break
-                image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                results = face_detection.process(image)
-                face_found = results.detections is not None and len(results.detections) > 0
-                if face_found:
-                    for detection in results.detections:
-                        mp_drawing.draw_detection(image, detection)
-                FRAME_WINDOW.image(image, channels='RGB')
-                now = time.time()
-                if face_found:
-                    st.session_state["last_face_time"] = now
-                    st.session_state["face_detected"] = True
-                    if st.session_state["away_status"] != "active":
-                        st.session_state["away_status"] = "active"
-                else:
-                    st.session_state["face_detected"] = False
-                    if now - st.session_state["last_face_time"] > 10:
-                        if st.session_state["away_status"] != "away":
-                            st.session_state["away_status"] = "away"
-                            try:
-                                requests.post(f"{API_URL}/status", data={"group_id": st.session_state.get("group_id", ""), "user_id": get_my_ip(), "status": "away"})
-                            except Exception as e:
-                                st.warning(f"상태 전송 실패: {e}")
-                time.sleep(0.1)
-                if not st.session_state["watch_mode"]:
-                    break
-        cap.release()
-        FRAME_WINDOW.empty()
 
 elif choice == "인증 업로드":
     st.header("📸 공부 인증 업로드")
